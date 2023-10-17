@@ -1,4 +1,5 @@
 # Notes
 
 - Optimization
+- Rendering
 
