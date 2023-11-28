@@ -88,7 +88,9 @@ public:
             return 4 * nodes[child(index)].eval(p, nodes);
         }
     }
-
+	
+    // This is not true pdf
+    //true pdf is : pdf(Point2& p, const std::vector<QuadTreeNode>& nodes)/4\pi(area of S^2)
     Float pdf(Point2& p, const std::vector<QuadTreeNode>& nodes) const {
         SAssert(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
         const int index = childIndex(p);

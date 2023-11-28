@@ -332,6 +332,61 @@ IndependentSampler
 
 
 
+## 4. Textures
+
+ [Textures - Mitsuba 3](https://mitsuba.readthedocs.io/en/latest/src/generated/plugins_textures.html) 
+
+### 4.1 Bitmap texture(bitmap)
+
+推荐预先了解：什么是gamma encode/decode & sRGB
+
+ [Gamma、Linear、sRGB 和Unity Color Space，你真懂了吗？ - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/66558476) 
+
+> 通常要使用成对的γ进行编码和解码，比如sRGB空间，它实际上是一个规范，它规定用于编码的γ值近似为1/2.2（即0.45，别忘了，编码用的γ都是小于1.0的），它规定用于解码的γ值近似为2.2（别忘了解码用的γ都是大于1.0的），也就是说，当我们说sRGB空间时，实际上是指它用于编码和解码的成对γ值。
+> 因为我们的显示器几乎都是sRGB空间值（也就是用γ=2.2进行解码），所以我们在jpg或png中基本上保存的也是sRGB空间值（也就是用γ=1/2.2进行编码）。
+> **简而言之，sRGB实际上就是定义了用于编码和解码的γ**，所以，你可以说γ1/2.2和γ2.2其实都是sRGB空间。 
+
+>  **到底什么纹理应该是sRGB，什么是Linear？** 
+>
+> 关于这一点，我个人有一个理解：所有需要人眼参与被创作出来的纹理，都应是sRGB（如美术画出来的图）。所有通过计算机计算出来的纹理（如噪声，Mask，LightMap）都应是Linear。
+>
+> 这很好解释，人眼看东西才需要考虑显示特性和校正的问题。而对计算机来说不需要，在计算机看来只是普通数据，自然直接选择Linear是最好的。
+
+有了上面的前置知识，就可以理解Mitsuba对Bitmap型纹理做的预处理了：
+
+This plugin provides a bitmap texture that performs interpolated lookups given a JPEG, PNG, OpenEXR, RGBE, TGA, or BMP input file.
+
+When loading the plugin, the data is **first converted into a usable color representation** for the renderer:
+
+- In rgb modes, sRGB textures are converted into a **linear color space.**
+- In spectral modes, sRGB textures are *spectrally upsampled* to plausible smooth spectra [[JH19](https://mitsuba.readthedocs.io/en/latest/zz_bibliography.html#id9)] and stored an intermediate representation that enables efficient queries at render time.
+- In monochrome modes, sRGB textures are converted to grayscale.
+
+These conversions **can alternatively be disabled with the raw flag**, e.g. when textured data is already in linear space or does not represent colors at all.
+
+再来看纹理参数；
+
+| **Parameter** | **Type**      | **Description**                                              | **Flags** |
+| ------------- | ------------- | ------------------------------------------------------------ | --------- |
+| filename      | string        | Filename of the bitmap to be loaded                          |           |
+| bitmap        | Bitmap object | When creating a Bitmap texture at runtime, e.g. from Python or C++, an existing Bitmap image instance can be passed directly rather than loading it from the filesystem with filename. |           |
+| data          | tensor        | Tensor array containing the texture data. Similarly to the bitmap parameter, this field can only be used at runtime. The raw parameter must also be set to true. | P, ∂      |
+| filter_type   | string        | Specifies how pixel values are interpolated and filtered when queried over larger UV regions. The following options are currently available:`bilinear` (default): perform bilinear interpolation, but no filtering.`nearest`: disable filtering and interpolation. In this mode, the plugin performs nearest neighbor lookups of texture values. |           |
+| wrap_mode     | string        | Controls the behavior of texture evaluations that fall outside of the [0,1] range. The following options are currently available:`repeat` (default): tile the texture infinitely.`mirror`: mirror the texture along its boundaries.`clamp`: clamp coordinates to the edge of the texture. |           |
+| raw           | boolean       | Should the transformation to the stored color data (e.g. sRGB to linear, spectral upsampling) be disabled? You will want to enable this when working with bitmaps storing normal maps that use a linear encoding. (Default: false) |           |
+| to_uv         | transform     | Specifies an optional 3x3 transformation matrix that will be applied to UV values. A 4x4 matrix can also be provided, in which case the extra row and column are ignored. | P         |
+| accel         | boolean       | Hardware acceleration features can be used in CUDA mode. These features can cause small differences as hardware interpolation methods typically have a loss of precision (not exactly 32-bit arithmetic). (Default: true) |           |
+|               |               |                                                              |           |
+
+举例子：
+
+```xml
+<texture type="bitmap">
+    <string name="filename" value="texture.png"/>
+    <string name="wrap_mode" value="mirror"/>
+</texture>
+```
+
 
 
 property* wo
